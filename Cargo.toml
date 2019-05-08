@@ -1,6 +1,6 @@
 [package]
 name = "proper"
-version = "0.1.1"
+version = "0.1.2"
 authors = ["Nick Hynes <nhynes@oasislabs.com>"]
 edition = "2018"
 description = "Derives for converting primitives to and from simple enums and newtype structs"
@@ -14,4 +14,4 @@ proc-macro = true
 [dependencies]
 proc-macro2 = "0.4"
 quote = "0.6"
-syn = { version = "0.15", features = ["full", "extra-traits"] }
+syn = "0.15"

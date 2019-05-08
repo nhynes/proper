@@ -1,4 +1,3 @@
-#[derive(Debug)]
 pub struct IntTy {
     ident: syn::Ident,
     signed: bool,

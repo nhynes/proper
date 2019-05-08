@@ -2,7 +2,6 @@ use syn::spanned::Spanned;
 
 use crate::IntTy;
 
-#[derive(Debug)]
 pub struct PrimAttrs {
     pub min_ty: Option<IntTy>,
     pub err_ctor: Option<syn::Path>,
