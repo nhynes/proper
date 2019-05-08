@@ -89,7 +89,9 @@ pub fn derive_prim(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let input_ident = &input.ident;
     let attrs = PrimAttrs::new(&input.attrs);
 
-    match &input.data {
+    let wrapper_ident = format_ident!("_IMPL_PRIM_FOR_{}", input_ident);
+
+    let conversions = match &input.data {
         syn::Data::Struct(syn::DataStruct {
             fields: syn::Fields::Unnamed(ref fields),
             ..
@@ -103,6 +105,14 @@ pub fn derive_prim(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
             err!(input: "`Prim` can only be derived on newtype structs and simple enums.");
             quote!()
         }
-    }
+    };
+
+    (quote! {
+        const #wrapper_ident: () = {
+            use std::convert::TryFrom;
+
+            #conversions
+        };
+    })
     .into()
 }
