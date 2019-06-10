@@ -109,7 +109,7 @@ pub fn derive_prim(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
 
     (quote! {
         const #wrapper_ident: () = {
-            use std::convert::TryFrom;
+            use core::convert::TryFrom;
 
             #conversions
         };
