@@ -106,16 +106,37 @@ pub fn derive_enum(
     };
     let min_ty_ident = min_ty.ident();
 
+    let mut last: Option<u64> = None;
     let from_converters = &variants
         .iter()
-        .enumerate()
-        .map(|(i, f)| {
+        .map(|f| {
             let ident = &f.ident;
-            let i = syn::LitInt::new(
-                i as u64,
-                syn::IntSuffix::None,
-                proc_macro2::Span::call_site(),
-            );
+            let value = match &f.discriminant {
+                Some((_, syn::Expr::Lit(expr_lit))) => {
+                    if let syn::Lit::Int(int) = &expr_lit.lit {
+                        last = Some(int.value());
+                        int.value()
+                    } else {
+                        return quote! {
+                          compile_error!("Unexpected enum discriminator");
+                        };
+                    }
+                }
+
+                Some((_, _)) => {
+                    return quote! {
+                      compile_error!("Unexpected enum discriminator");
+                    };
+                }
+
+                None => {
+                    let next = last.map(|x| x + 1).unwrap_or(0);
+                    last = Some(next);
+                    next
+                }
+            };
+
+            let i = syn::LitInt::new(value, syn::IntSuffix::None, proc_macro2::Span::call_site());
             quote! {
                 #i => { #input_ident::#ident }
             }
