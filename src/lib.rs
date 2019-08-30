@@ -108,6 +108,7 @@ pub fn derive_prim(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     };
 
     (quote! {
+        #[allow(non_upper_case_globals)]
         const #wrapper_ident: () = {
             use core::convert::TryFrom;
 

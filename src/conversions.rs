@@ -8,10 +8,9 @@ pub fn derive_newtype(
     fields: &syn::FieldsUnnamed,
 ) -> proc_macro2::TokenStream {
     let newtype_field = fields.unnamed.first().expect("`len()` == 1");
-    let newtype = match &newtype_field.value().ty {
-        syn::Type::Path(syn::TypePath { path, .. }) => {
-            let ty_ident = &path.segments.last().unwrap().value().ident;
-            IntTy::new(ty_ident.clone())
+    let newtype = match &newtype_field.ty {
+        syn::Type::Path(syn::TypePath { path, .. }) if path.get_ident().is_some() => {
+            IntTy::new(path.get_ident().unwrap().clone())
         }
         _ => None,
     };
@@ -96,9 +95,8 @@ pub fn derive_enum(
             } else if variants.len() <= <u64>::max_value() as usize {
                 "u64"
             } else {
-                return quote! {
-                    compile_error!("Your enum has way too many variants...")
-                };
+                err!(input_ident: "Your enum has way too many variants...");
+                return quote!();
             },
             proc_macro2::Span::call_site(),
         ))
@@ -106,37 +104,37 @@ pub fn derive_enum(
     };
     let min_ty_ident = min_ty.ident();
 
-    let mut last: Option<u64> = None;
+    let mut next = 0;
     let from_converters = &variants
         .iter()
         .map(|f| {
             let ident = &f.ident;
-            let value = match &f.discriminant {
+            let cur = match &f.discriminant {
                 Some((_, syn::Expr::Lit(expr_lit))) => {
                     if let syn::Lit::Int(int) = &expr_lit.lit {
-                        last = Some(int.value());
-                        int.value()
+                        match int.base10_parse() {
+                            Ok(int) => int,
+                            Err(_) => {
+                                err!(int: "{} is not a number", int);
+                                return quote!();
+                            }
+                        }
                     } else {
-                        return quote! {
-                          compile_error!("Unexpected enum discriminator");
-                        };
+                        err!(expr_lit: "Enum variant must be an integer.");
+                        return quote!();
                     }
                 }
 
-                Some((_, _)) => {
-                    return quote! {
-                      compile_error!("Unexpected enum discriminator");
-                    };
+                Some((_, expr)) => {
+                    err!(expr: "Enum variant must be an integer.");
+                    return quote!();
                 }
 
-                None => {
-                    let next = last.map(|x| x + 1).unwrap_or(0);
-                    last = Some(next);
-                    next
-                }
+                None => next,
             };
 
-            let i = syn::LitInt::new(value, syn::IntSuffix::None, proc_macro2::Span::call_site());
+            let i = syn::LitInt::new(&format!("{}", cur), proc_macro2::Span::call_site());
+            next = cur + 1;
             quote! {
                 #i => { #input_ident::#ident }
             }

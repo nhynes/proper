@@ -34,7 +34,11 @@ impl PrimAttrs {
 
             for nested_meta in nested_metas {
                 let meta = match nested_meta {
-                    syn::NestedMeta::Meta(syn::Meta::NameValue(meta)) => meta,
+                    syn::NestedMeta::Meta(syn::Meta::NameValue(meta))
+                        if meta.path.get_ident().is_some() =>
+                    {
+                        meta
+                    }
                     meta_item => {
                         err!(meta_item: "Unrecognized meta item: `{}`",
                              meta_item.span().unwrap().source_text().unwrap());
@@ -43,16 +47,18 @@ impl PrimAttrs {
                     }
                 };
 
+                let meta_ident = meta.path.get_ident().unwrap();
+
                 let lit = match &meta.lit {
                     syn::Lit::Str(lit_str) => lit_str,
                     lit => {
-                        err!(lit: "The value of `{}` must be a string literal.", meta.ident);
+                        err!(lit: "The value of `{}` must be a string literal.", meta_ident);
                         has_errs = true;
                         continue;
                     }
                 };
 
-                if meta.ident == "ty" {
+                if meta_ident == "ty" {
                     if min_ty.is_some() {
                         err!(meta: "Multiple `ty` attributes provided.");
                         has_errs = true;
@@ -61,12 +67,12 @@ impl PrimAttrs {
                     min_ty = match lit.parse::<syn::Ident>().ok().and_then(IntTy::new) {
                         Some(ty) => Some(ty),
                         None => {
-                            err!(lit: "The value of `{}` must be an integer type", meta.ident);
+                            err!(lit: "The value of `{}` must be an integer type", meta_ident);
                             has_errs = true;
                             continue;
                         }
                     };
-                } else if meta.ident == "error" {
+                } else if meta_ident == "error" {
                     if err_ctor.is_some() {
                         err!(meta: "Multiple `error` attributes provided.");
                         has_errs = true;
@@ -76,13 +82,13 @@ impl PrimAttrs {
                         Ok(ctor) => Some(ctor),
                         Err(_) => {
                             err!(lit: "The value of `{}` must be a path to a constructor",
-                                 meta.ident);
+                                 meta_ident);
                             has_errs = true;
                             continue;
                         }
                     };
                 } else {
-                    err!(meta.ident: "Unrecognized attribute `{}`", meta.ident);
+                    err!(meta_ident: "Unrecognized attribute `{}`", meta_ident);
                     has_errs = true;
                     continue;
                 }
